@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
 
@@ -9,12 +9,15 @@ export default function EditorPage() {
   const router = useRouter()
   const params = useParams()
   const projectId = params.id as string
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [headline, setHeadline] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -45,6 +48,41 @@ export default function EditorPage() {
     fetchProject()
   }, [projectId, router])
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.currentTarget.files
+    if (!files) return
+
+    setUploading(true)
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        console.log(`Uploading: ${file.name} (${file.size} bytes)`)
+        
+        const fileName = `${projectId}/${Date.now()}-${file.name}`
+        
+        const { error } = await supabase.storage
+          .from('media')
+          .upload(fileName, file)
+
+        if (error) throw error
+
+        const { data } = supabase.storage
+          .from('media')
+          .getPublicUrl(fileName)
+
+        setUploadedFiles(prev => [...prev, data.publicUrl])
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Error al subir archivo')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   const handleSaveProject = async () => {
     if (!project) return
     setSaving(true)
@@ -56,14 +94,17 @@ export default function EditorPage() {
             ...project.data,
             headline,
             description,
+            media: uploadedFiles,
           },
           updated_at: new Date().toISOString()
         })
         .eq('id', projectId)
 
       if (error) throw error
+      alert('Proyecto guardado')
     } catch (err) {
       console.error('Error saving:', err)
+      alert('Error al guardar')
     } finally {
       setSaving(false)
     }
@@ -150,15 +191,17 @@ export default function EditorPage() {
         gap: '2rem'
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            border: '2px dashed rgba(0, 212, 255, 0.3)',
-            borderRadius: '0.75rem',
-            padding: '2rem',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.3s'
-          }}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '2px dashed rgba(0, 212, 255, 0.3)',
+              borderRadius: '0.75rem',
+              padding: '2rem',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.8)'
               ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
@@ -168,14 +211,41 @@ export default function EditorPage() {
               ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
             }}
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
             <p style={{ fontSize: '0.9rem', color: '#a0aec0', marginBottom: '0.25rem' }}>
-              Arrastra archivos aquí
+              {uploading ? 'Subiendo...' : 'Haz clic para seleccionar archivos'}
             </p>
             <p style={{ fontSize: '0.75rem', color: '#718096' }}>
               PNG, JPG, MP4 • Máx 100 MB
             </p>
           </div>
+
+          {uploadedFiles.length > 0 && (
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(0, 212, 255, 0.2)',
+              borderRadius: '0.75rem',
+              padding: '1rem',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <p style={{ fontSize: '0.875rem', color: '#cbd5e0', marginBottom: '0.75rem', fontWeight: '600' }}>
+                {uploadedFiles.length} archivo(s) subido(s)
+              </p>
+              {uploadedFiles.map((url, idx) => (
+                <div key={idx} style={{ fontSize: '0.8rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
+                  ✓ Archivo {idx + 1}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div style={{
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -254,27 +324,27 @@ export default function EditorPage() {
 
             <button
               onClick={handleSaveProject}
-              disabled={saving}
+              disabled={saving || uploading}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: saving ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                background: saving || uploading ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
                 color: '#0a0e27',
                 fontWeight: '700',
                 borderRadius: '0.5rem',
                 border: 'none',
-                cursor: saving ? 'not-allowed' : 'pointer',
+                cursor: saving || uploading ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 transition: 'all 0.3s',
-                opacity: saving ? 0.7 : 1
+                opacity: saving || uploading ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
-                if (!saving) {
+                if (!saving && !uploading) {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
                   ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
                 }
               }}
               onMouseLeave={(e) => {
-                if (!saving) {
+                if (!saving && !uploading) {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                   ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
                 }
