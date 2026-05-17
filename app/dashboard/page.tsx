@@ -1,9 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Button from '@/components/ui/Button'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
 
@@ -11,6 +10,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [hoveredProject, setHoveredProject] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -20,6 +21,8 @@ export default function DashboardPage() {
           router.push('/auth/login')
           return
         }
+
+        setUser(user)
 
         const { data, error } = await supabase
           .from('projects')
@@ -39,60 +42,202 @@ export default function DashboardPage() {
     fetchProjects()
   }, [router])
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-dark">
-      <header className="border-b border-white/10 backdrop-blur-xl bg-dark/50 sticky top-0 z-40">
-        <div className="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Mis Proyectos</h1>
-          <Button
-            variant="primary"
-            onClick={() => router.push('/dashboard/new')}
-          >
-            + Nuevo Proyecto
-          </Button>
+    <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh' }}>
+      {/* Header */}
+      <header style={{
+        borderBottom: '1px solid rgba(0, 212, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(10, 14, 39, 0.8)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        padding: '1rem 1.5rem'
+      }}>
+        <div style={{
+          maxWidth: '100%',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              ✨ MotionAI
+            </div>
+          </Link>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', flex: 1 }}>Mis Proyectos</h1>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button
+              onClick={() => router.push('/dashboard/new')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                color: '#0a0e27',
+                fontWeight: '700',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+              }}
+            >
+              + Nuevo Proyecto
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'transparent',
+                border: '1px solid rgba(0, 212, 255, 0.3)',
+                color: '#a0aec0',
+                fontWeight: '600',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.8)'
+                ;(e.currentTarget as HTMLElement).style.color = '#00d4ff'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.3)'
+                ;(e.currentTarget as HTMLElement).style.color = '#a0aec0'
+              }}
+            >
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
+      {/* Main Content */}
+      <main style={{
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '3rem 1.5rem'
+      }}>
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
-            <p className="text-gray-400">Cargando proyectos...</p>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <div style={{ display: 'inline-block', fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+            <p style={{ color: '#a0aec0', fontSize: '1.1rem' }}>Cargando proyectos...</p>
           </div>
         ) : projects.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🎬</div>
-            <h2 className="text-xl font-semibold mb-2">No tienes proyectos aún</h2>
-            <p className="text-gray-400 mb-6">Crea tu primer video promo</p>
-            <Button
-              variant="primary"
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎬</div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              No tienes proyectos aún
+            </h2>
+            <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+              Crea tu primer video promo cinematográfico
+            </p>
+            <button
               onClick={() => router.push('/dashboard/new')}
+              style={{
+                padding: '0.75rem 2rem',
+                background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                color: '#0a0e27',
+                fontWeight: '700',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+              }}
             >
               Crear Proyecto
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '1.5rem'
+          }}>
             {projects.map((project) => (
-              <motion.div
+              <div
                 key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  padding: '1.5rem',
+                  backgroundColor: hoveredProject === project.id ? 'rgba(0, 212, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                  border: hoveredProject === project.id ? '1px solid rgba(0, 212, 255, 0.5)' : '1px solid rgba(0, 212, 255, 0.2)',
+                  borderRadius: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  backdropFilter: 'blur(10px)'
+                }}
                 onClick={() => router.push(`/dashboard/${project.id}`)}
-                className="glassmorphism p-6 rounded-xl cursor-pointer hover:border-neon transition-all border border-white/10 hover:border-neon/50 group"
+                onMouseEnter={() => setHoveredProject(project.id)}
+                onMouseLeave={() => setHoveredProject(null)}
               >
-                <div className="mb-4 text-4xl">🎬</div>
-                <h3 className="font-semibold mb-2 line-clamp-2">{project.title}</h3>
-                <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                <div style={{ marginBottom: '1rem', fontSize: '2.5rem' }}>🎬</div>
+                <h3 style={{
+                  fontWeight: '600',
+                  marginBottom: '0.5rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {project.title}
+                </h3>
+                <p style={{
+                  fontSize: '0.9rem',
+                  color: '#a0aec0',
+                  marginBottom: '1rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
                   {project.description || 'Sin descripción'}
                 </p>
-                <div className="flex justify-between items-center text-xs text-gray-500">
-                  <span className="inline-block px-2 py-1 bg-white/5 rounded">
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.8rem',
+                  color: '#718096'
+                }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '0.25rem 0.75rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '0.3rem',
+                    textTransform: 'capitalize'
+                  }}>
                     {project.style}
                   </span>
                   <span>{new Date(project.created_at).toLocaleDateString('es-ES')}</span>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

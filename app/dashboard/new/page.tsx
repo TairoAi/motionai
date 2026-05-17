@@ -1,10 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { STYLE_PRESETS } from '@/lib/constants'
 import type { Style } from '@/lib/types'
@@ -16,6 +14,7 @@ export default function NewProjectPage() {
   const [selectedStyle, setSelectedStyle] = useState<Style>('apple')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [hoveredStyle, setHoveredStyle] = useState<string | null>(null)
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,121 +55,265 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
-      <header className="border-b border-white/10 backdrop-blur-xl bg-dark/50 sticky top-0 z-40">
-        <div className="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Nuevo Proyecto</h1>
-          <Button
-            variant="outline"
+    <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh' }}>
+      {/* Header */}
+      <header style={{
+        borderBottom: '1px solid rgba(0, 212, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(10, 14, 39, 0.8)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        padding: '1rem 1.5rem'
+      }}>
+        <div style={{
+          maxWidth: '100%',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Nuevo Proyecto</h1>
+          <button
             onClick={() => router.push('/dashboard')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'transparent',
+              border: '1px solid rgba(0, 212, 255, 0.3)',
+              color: '#a0aec0',
+              fontWeight: '600',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.8)'
+              ;(e.currentTarget as HTMLElement).style.color = '#00d4ff'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.3)'
+              ;(e.currentTarget as HTMLElement).style.color = '#a0aec0'
+            }}
           >
             Cancelar
-          </Button>
+          </button>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-12">
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleCreate}
-          className="space-y-6"
-        >
-          {/* Project Info */}
-          <div className="glassmorphism p-6 rounded-xl space-y-4">
-            <h2 className="text-lg font-semibold">Información del Proyecto</h2>
+      {/* Main Content */}
+      <main style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        padding: '3rem 1.5rem'
+      }}>
+        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Project Info Section */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Información del Proyecto</h2>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Título *</label>
-              <Input
+            {/* Title Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#cbd5e0' }}>
+                Título *
+              </label>
+              <input
+                type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Mi Video Promo Increíble"
                 disabled={loading}
                 autoFocus
+                required
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(0, 212, 255, 0.3)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  color: '#ffffff',
+                  fontSize: '1rem',
+                  transition: 'all 0.3s',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.8)'
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.3)'
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+                }}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Descripción</label>
+            {/* Description Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#cbd5e0' }}>
+                Descripción
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe brevemente tu proyecto..."
                 disabled={loading}
-                className="w-full px-4 py-2.5 bg-dark-secondary border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon transition-all resize-none"
                 rows={3}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(0, 212, 255, 0.3)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  color: '#ffffff',
+                  fontSize: '1rem',
+                  transition: 'all 0.3s',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  resize: 'none'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.8)'
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.3)'
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+                }}
               />
             </div>
           </div>
 
-          {/* Style Selection */}
-          <div className="glassmorphism p-6 rounded-xl space-y-4">
-            <h2 className="text-lg font-semibold">Elige un Estilo</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+          {/* Style Selection Section */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Elige un Estilo</h2>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem'
+            }}>
               {Object.entries(STYLE_PRESETS).map(([key, preset]) => (
-                <motion.button
+                <button
                   key={key}
                   type="button"
                   onClick={() => setSelectedStyle(key as Style)}
-                  whileHover={{ scale: 1.02 }}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedStyle === key
-                      ? 'border-neon bg-neon/10'
-                      : 'border-white/10 hover:border-white/20'
-                  }`}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: '0.5rem',
+                    border: selectedStyle === key ? '2px solid #00d4ff' : '1px solid rgba(0, 212, 255, 0.2)',
+                    backgroundColor: selectedStyle === key ? 'rgba(0, 212, 255, 0.15)' : hoveredStyle === key ? 'rgba(0, 212, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+                    color: '#ffffff',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={() => setHoveredStyle(key)}
+                  onMouseLeave={() => setHoveredStyle(null)}
                 >
-                  <h3 className="font-semibold mb-1">{preset.name}</h3>
-                  <p className="text-sm text-gray-400">{preset.description}</p>
-                </motion.button>
+                  <h3 style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{preset.name}</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#a0aec0' }}>{preset.description}</p>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Preview */}
+          {/* Style Preview */}
           {selectedStyle && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="glassmorphism p-6 rounded-xl"
-            >
-              <h3 className="font-semibold mb-3">Vista Previa del Estilo</h3>
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(0, 212, 255, 0.2)',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              <h3 style={{ fontWeight: '600' }}>Vista Previa del Estilo</h3>
               <div
-                className="h-32 rounded-lg flex items-center justify-center"
                 style={{
-                  backgroundColor: STYLE_PRESETS[selectedStyle].colors.bg,
-                  color: STYLE_PRESETS[selectedStyle].colors.text,
+                  height: '150px',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: STYLE_PRESETS[selectedStyle]?.colors?.background || '#000000'
                 }}
               >
-                <div className="text-center">
-                  <p className="text-sm opacity-75">
-                    {STYLE_PRESETS[selectedStyle].name}
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.875rem', opacity: 0.75, color: STYLE_PRESETS[selectedStyle]?.colors?.text || '#ffffff', marginBottom: '0.5rem' }}>
+                    {STYLE_PRESETS[selectedStyle]?.name}
                   </p>
-                  <p className="text-lg font-semibold">Ejemplo de Video</p>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: STYLE_PRESETS[selectedStyle]?.colors?.text || '#ffffff' }}>
+                    Ejemplo de Video
+                  </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
+          {/* Error Message */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm"
-            >
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
+              borderRadius: '0.5rem',
+              color: '#fca5a5',
+              fontSize: '0.875rem'
+            }}>
               {error}
-            </motion.div>
+            </div>
           )}
 
-          <Button
-            variant="primary"
+          {/* Submit Button */}
+          <button
             type="submit"
             disabled={loading || !title.trim()}
-            className="w-full"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: loading || !title.trim() ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
+              color: '#0a0e27',
+              fontWeight: '700',
+              borderRadius: '0.5rem',
+              border: 'none',
+              cursor: loading || !title.trim() ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              transition: 'all 0.3s',
+              opacity: loading || !title.trim() ? 0.7 : 1
+            }}
+            onMouseEnter={(e) => {
+              if (!loading && title.trim()) {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading && title.trim()) {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+              }
+            }}
           >
             {loading ? 'Creando...' : 'Crear Proyecto'}
-          </Button>
-        </motion.form>
+          </button>
+        </form>
       </main>
     </div>
   )
