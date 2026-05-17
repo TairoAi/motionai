@@ -1,55 +1,25 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import UploadZone from '@/components/editor/UploadZone'
-import MediaList from '@/components/editor/MediaList'
-import SceneForm from '@/components/editor/SceneForm'
-import TimelineEditor from '@/components/editor/TimelineEditor'
-import VideoPreview from '@/components/editor/VideoPreview'
-import ExportModal from '@/components/editor/ExportModal'
-import ExportStatusPanel from '@/components/editor/ExportStatusPanel'
-import { useMediaUpload } from '@/lib/hooks/useMediaUpload'
-import { useSceneGeneration } from '@/lib/hooks/useSceneGeneration'
-import { useVideoExport } from '@/lib/hooks/useVideoExport'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
-import type { ExportFormat } from '@/components/editor/ExportModal'
 
-export default function ProjectEditorPage() {
+export default function EditorPage() {
+  const router = useRouter()
   const params = useParams()
   const projectId = params.id as string
+
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [title, setTitle] = useState('')
+  const [headline, setHeadline] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedMediaId, setSelectedMediaId] = useState<string>()
-  const router = useRouter()
-
-  const { media, loading: uploading, uploadFiles, removeMedia } = useMediaUpload({
-    projectId,
-  })
-
-  const { scenes, loading: generating, error: generatingError, generateScene, removeScene, updateScene } = useSceneGeneration({
-    projectId,
-    style: project?.style || 'apple',
-  })
-
-  const { exports, loading: exporting, startExport, cancelExport, fetchExports } = useVideoExport({ projectId })
-
-  const [selectedSceneId, setSelectedSceneId] = useState<string>()
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
+        const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
           router.push('/auth/login')
           return
@@ -64,10 +34,8 @@ export default function ProjectEditorPage() {
 
         if (error) throw error
         setProject(data)
-        setTitle(data.title)
-        setDescription(data.description || '')
       } catch (err) {
-        console.error('Error al cargar proyecto:', err)
+        console.error('Error:', err)
         router.push('/dashboard')
       } finally {
         setLoading(false)
@@ -75,67 +43,27 @@ export default function ProjectEditorPage() {
     }
 
     fetchProject()
-    fetchExports()
   }, [projectId, router])
-
-  // Poll for export status updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchExports()
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [projectId])
-
-  const handleUpload = async (files: File[]) => {
-    const uploaded = await uploadFiles(files)
-    if (uploaded.length > 0 && !selectedMediaId) {
-      setSelectedMediaId(uploaded[0].id)
-    }
-  }
-
-  const handleGenerateScene = async (data: {
-    headline: string
-    subtitle: string
-    description: string
-  }) => {
-    await generateScene(data)
-  }
-
-  const handleStartExport = async (format: ExportFormat) => {
-    if (scenes.length === 0) {
-      alert('Por favor genera escenas primero')
-      return
-    }
-
-    await startExport(format)
-    setIsExportModalOpen(false)
-  }
-
-  const handleCancelExport = async (exportId: string) => {
-    await cancelExport(exportId)
-  }
 
   const handleSaveProject = async () => {
     if (!project) return
-
     setSaving(true)
     try {
       const { error } = await supabase
         .from('projects')
         .update({
-          title,
-          description,
-          updated_at: new Date().toISOString(),
+          data: {
+            ...project.data,
+            headline,
+            description,
+          },
+          updated_at: new Date().toISOString()
         })
         .eq('id', projectId)
 
       if (error) throw error
-      setProject({ ...project, title, description })
-      alert('¡Proyecto guardado!')
     } catch (err) {
-      console.error('Error al guardar:', err)
-      alert('Error al guardar proyecto')
+      console.error('Error saving:', err)
     } finally {
       setSaving(false)
     }
@@ -143,10 +71,10 @@ export default function ProjectEditorPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
-          <p className="text-gray-400">Cargando editor...</p>
+      <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <p style={{ color: '#a0aec0', fontSize: '1.1rem' }}>Cargando proyecto...</p>
         </div>
       </div>
     )
@@ -154,151 +82,299 @@ export default function ProjectEditorPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400">Proyecto no encontrado</p>
-        </div>
+      <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Proyecto no encontrado</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
-      {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-xl bg-dark/50 sticky top-0 z-40">
-        <div className="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
+    <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh' }}>
+      <header style={{
+        borderBottom: '1px solid rgba(0, 212, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(10, 14, 39, 0.8)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        padding: '1rem 1.5rem'
+      }}>
+        <div style={{
+          maxWidth: '100%',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
           <div>
-            <h1 className="text-2xl font-bold">{title}</h1>
-            <p className="text-sm text-gray-400">Estilo: {project.style}</p>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+              {project.title}
+            </h1>
+            <p style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
+              Estilo: <span style={{ textTransform: 'capitalize', fontWeight: '600' }}>{project.style}</span>
+            </p>
           </div>
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => router.push('/dashboard')}>
-              Atrás
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => setIsExportModalOpen(true)}
-              disabled={scenes.length === 0 || exporting}
-            >
-              📦 Exportar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveProject}
-              disabled={saving}
-            >
-              {saving ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'transparent',
+              border: '1px solid rgba(0, 212, 255, 0.3)',
+              color: '#a0aec0',
+              fontWeight: '600',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.8)'
+              ;(e.currentTarget as HTMLElement).style.color = '#00d4ff'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.3)'
+              ;(e.currentTarget as HTMLElement).style.color = '#a0aec0'
+            }}
+          >
+            Volver
+          </button>
         </div>
       </header>
 
-      {/* Main Editor */}
-      <main className="p-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Panel - Upload & Info */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-1 space-y-6"
+      <main style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem 1.5rem',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '2rem'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '2px dashed rgba(0, 212, 255, 0.3)',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.3s'
+          }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.8)'
+              ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 212, 255, 0.3)'
+              ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            }}
           >
-            {/* Project Info */}
-            <div className="glassmorphism p-6 rounded-xl">
-              <h3 className="font-semibold mb-4">Información del Proyecto</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Título</label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Título del proyecto"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Descripción</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe tu video..."
-                    className="w-full px-4 py-2.5 bg-dark-secondary border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon transition-all resize-none"
-                    rows={3}
-                  />
-                </div>
-              </div>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+            <p style={{ fontSize: '0.9rem', color: '#a0aec0', marginBottom: '0.25rem' }}>
+              Arrastra archivos aquí
+            </p>
+            <p style={{ fontSize: '0.75rem', color: '#718096' }}>
+              PNG, JPG, MP4 • Máx 100 MB
+            </p>
+          </div>
+
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Generador de Escenas IA</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#cbd5e0' }}>
+                Titular
+              </label>
+              <input
+                type="text"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="Mi Producto Increíble"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(0, 212, 255, 0.3)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  color: '#ffffff',
+                  fontSize: '1rem',
+                  transition: 'all 0.3s',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.8)'
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.3)'
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+                }}
+              />
             </div>
 
-            {/* Upload Zone */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#cbd5e0' }}>
+                Descripción
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe tu producto..."
+                rows={4}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(0, 212, 255, 0.3)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  color: '#ffffff',
+                  fontSize: '1rem',
+                  transition: 'all 0.3s',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  resize: 'none'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.8)'
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.3)'
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleSaveProject}
+              disabled={saving}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: saving ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                color: '#0a0e27',
+                fontWeight: '700',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                transition: 'all 0.3s',
+                opacity: saving ? 0.7 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!saving) {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+                }
+              }}
+            >
+              {saving ? 'Guardando...' : 'Generar Escenas'}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Vista Previa</h3>
+            <div
+              style={{
+                width: '100%',
+                aspectRatio: '16 / 9',
+                borderRadius: '0.5rem',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                border: '1px solid rgba(0, 212, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎬</div>
+                <p style={{ fontSize: '0.9rem', color: '#a0aec0' }}>
+                  Vista previa aquí
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Información</h3>
+
             <div>
-              <h3 className="font-semibold mb-3 text-sm">Subir Media</h3>
-              <UploadZone onFilesSelected={handleUpload} loading={uploading} />
+              <p style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.25rem' }}>
+                Estado
+              </p>
+              <p style={{ textTransform: 'capitalize', fontWeight: '600' }}>
+                {project.status}
+              </p>
             </div>
 
-            {/* Media List */}
-            {media.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-3 text-sm">Archivos Subidos</h3>
-                <MediaList
-                  media={media}
-                  onRemove={removeMedia}
-                  selectedId={selectedMediaId}
-                  onSelect={setSelectedMediaId}
-                  loading={uploading}
-                />
-              </div>
-            )}
-          </motion.div>
+            <div>
+              <p style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.25rem' }}>
+                Creado
+              </p>
+              <p style={{ fontSize: '0.9rem' }}>
+                {new Date(project.created_at).toLocaleDateString('es-ES')}
+              </p>
+            </div>
 
-          {/* Center - Preview & Timeline */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-1 space-y-6"
-          >
-            {/* Video Preview with Scene Playback */}
-            <VideoPreview scenes={scenes} />
-
-            {/* Timeline Editor */}
-            <TimelineEditor
-              scenes={scenes}
-              selectedSceneId={selectedSceneId}
-              onSelectScene={setSelectedSceneId}
-              onRemoveScene={removeScene}
-              onUpdateScene={updateScene}
-            />
-          </motion.div>
-
-          {/* Right Panel - Scene Generator & Exports */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-1 space-y-6"
-          >
-            <SceneForm
-              style={project.style}
-              onGenerateScene={handleGenerateScene}
-              isGenerating={generating}
-              error={generatingError}
-            />
-
-            <ExportStatusPanel
-              exports={exports}
-              isLoading={exporting}
-              onCancelExport={handleCancelExport}
-              onRefresh={fetchExports}
-            />
-          </motion.div>
+            <button
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                color: '#0a0e27',
+                fontWeight: '700',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                transition: 'all 0.3s',
+                marginTop: '0.5rem'
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+              }}
+            >
+              📥 Exportar
+            </button>
+          </div>
         </div>
       </main>
-
-      {/* Export Modal */}
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        onExport={handleStartExport}
-        isLoading={exporting}
-      />
     </div>
   )
 }
