@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm']
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const {
       data: { user },
