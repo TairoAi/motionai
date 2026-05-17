@@ -33,7 +33,11 @@ export default function Home() {
             <Link href="/dashboard" style={{ padding: '1rem 2rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 20px 40px rgba(0, 212, 255, 0.4)' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-5px)'; el.style.boxShadow = '0 30px 50px rgba(0, 212, 255, 0.6)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = '0 20px 40px rgba(0, 212, 255, 0.4)'; }}>
               🚀 Comenzar Gratis
             </Link>
-            <button style={{ padding: '1rem 2rem', background: 'transparent', border: '2px solid #00d4ff', color: '#00d4ff', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(0, 212, 255, 0.1)'; el.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.boxShadow = 'none'; }}>
+            <button style={{ padding: '1rem 2rem', background: 'transparent', border: '2px solid #00d4ff', color: '#00d4ff', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s' }} onClick={() => {
+              // Scroll to features section
+              const featuresSection = document.querySelector('section:nth-of-type(2)')
+              featuresSection?.scrollIntoView({ behavior: 'smooth' })
+            }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(0, 212, 255, 0.1)'; el.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.boxShadow = 'none'; }}>
               Ver Demo
             </button>
           </div>
