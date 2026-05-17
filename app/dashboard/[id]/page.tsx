@@ -88,7 +88,7 @@ export default function ProjectEditorPage() {
   }, [projectId])
 
   const handleUpload = async (files: File[]) => {
-    const uploaded = await uploadFiles(new DataTransfer().items.add(...files).files)
+    const uploaded = await uploadFiles(files)
     if (uploaded.length > 0 && !selectedMediaId) {
       setSelectedMediaId(uploaded[0].id)
     }
