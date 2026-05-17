@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
+import { renderVideoFromScenes } from '@/lib/videoRenderer'
 
 export default function EditorPage() {
   const router = useRouter()
@@ -22,6 +23,8 @@ export default function EditorPage() {
   const [generatingScenes, setGeneratingScenes] = useState(false)
   const [sceneError, setSceneError] = useState('')
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -167,6 +170,47 @@ export default function EditorPage() {
 
   const handleDeleteFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleExport = async () => {
+    if (!project) return
+    if (generatedScenes.length === 0) {
+      setNotification({ type: 'error', message: 'Genera las escenas primero' })
+      setTimeout(() => setNotification(null), 3000)
+      return
+    }
+
+    setExporting(true)
+    setExportProgress(0)
+    try {
+      const blob = await renderVideoFromScenes({
+        scenes: generatedScenes,
+        mediaUrls: uploadedFiles.filter(f => f.type.startsWith('image/')).map(f => f.fileUrl),
+        style: project.style,
+        headline,
+        description,
+        onProgress: (pct) => setExportProgress(Math.round(pct * 100)),
+      })
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${project.title.replace(/[^\w]+/g, '-')}.webm`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+
+      setNotification({ type: 'success', message: '✓ Video descargado' })
+      setTimeout(() => setNotification(null), 3000)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al renderizar'
+      setNotification({ type: 'error', message })
+      setTimeout(() => setNotification(null), 5000)
+    } finally {
+      setExporting(false)
+      setExportProgress(0)
+    }
   }
 
   if (loading) {
@@ -650,28 +694,33 @@ export default function EditorPage() {
             </div>
 
             <button
+              onClick={handleExport}
+              disabled={exporting || generatedScenes.length === 0}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                background: exporting || generatedScenes.length === 0 ? 'rgba(0, 212, 255, 0.4)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
                 color: '#0a0e27',
                 fontWeight: '700',
                 borderRadius: '0.5rem',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: exporting || generatedScenes.length === 0 ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 transition: 'all 0.3s',
-                marginTop: '0.5rem'
+                marginTop: '0.5rem',
+                opacity: exporting || generatedScenes.length === 0 ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+                if (!exporting && generatedScenes.length > 0) {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
+                }
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                 ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
               }}
             >
-              📥 Exportar
+              {exporting ? `Renderizando ${exportProgress}%` : '📥 Exportar video'}
             </button>
           </div>
         </div>
