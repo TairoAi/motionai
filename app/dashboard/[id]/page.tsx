@@ -56,22 +56,23 @@ export default function EditorPage() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        console.log(`Uploading: ${file.name} (${file.size} bytes)`)
-        
-        const fileName = `${projectId}/${Date.now()}-${file.name}`
-        
-        const { error } = await supabase.storage
-          .from('media')
-          .upload(fileName, file)
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('projectId', projectId)
 
-        if (error) throw error
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
 
-        const { data } = supabase.storage
-          .from('media')
-          .getPublicUrl(fileName)
+        if (!response.ok) {
+          throw new Error('Upload failed')
+        }
 
-        setUploadedFiles(prev => [...prev, data.publicUrl])
+        const data = await response.json()
+        setUploadedFiles(prev => [...prev, data.fileUrl])
       }
+      alert('✓ Archivo(s) subido(s) correctamente')
     } catch (err) {
       console.error('Upload error:', err)
       alert('Error al subir archivo')
@@ -101,7 +102,7 @@ export default function EditorPage() {
         .eq('id', projectId)
 
       if (error) throw error
-      alert('Proyecto guardado')
+      alert('✓ Proyecto guardado')
     } catch (err) {
       console.error('Error saving:', err)
       alert('Error al guardar')
@@ -221,10 +222,10 @@ export default function EditorPage() {
             />
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
             <p style={{ fontSize: '0.9rem', color: '#a0aec0', marginBottom: '0.25rem' }}>
-              {uploading ? 'Subiendo...' : 'Haz clic para seleccionar archivos'}
+              {uploading ? '⏳ Subiendo...' : 'Haz clic para seleccionar'}
             </p>
             <p style={{ fontSize: '0.75rem', color: '#718096' }}>
-              PNG, JPG, MP4 • Máx 100 MB
+              PNG, JPG, MP4
             </p>
           </div>
 
@@ -237,13 +238,8 @@ export default function EditorPage() {
               backdropFilter: 'blur(10px)'
             }}>
               <p style={{ fontSize: '0.875rem', color: '#cbd5e0', marginBottom: '0.75rem', fontWeight: '600' }}>
-                {uploadedFiles.length} archivo(s) subido(s)
+                ✓ {uploadedFiles.length} archivo(s)
               </p>
-              {uploadedFiles.map((url, idx) => (
-                <div key={idx} style={{ fontSize: '0.8rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-                  ✓ Archivo {idx + 1}
-                </div>
-              ))}
             </div>
           )}
 
