@@ -1,17 +1,7 @@
-import { useState } from 'react'
-import type { ExportFormat } from '@/components/editor/ExportModal'
+'use client'
 
-export interface Export {
-  id: string
-  projectId: string
-  format: ExportFormat
-  status: 'queued' | 'processing' | 'completed' | 'failed'
-  videoUrl?: string
-  errorMessage?: string
-  progress: number
-  createdAt: string
-  completedAt?: string
-}
+import { useState, useEffect } from 'react'
+import type { Export } from '@/lib/types'
 
 interface UseVideoExportProps {
   projectId: string
@@ -22,55 +12,39 @@ export function useVideoExport({ projectId }: UseVideoExportProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const startExport = async (format: ExportFormat): Promise<Export | null> => {
-    setLoading(true)
-    setError('')
-
+  const startExport = async (format: string): Promise<void> => {
     try {
+      setLoading(true)
+      setError('')
+
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, format }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Error al iniciar exportación')
-      }
+      if (!response.ok) throw new Error('Error iniciando exportación')
 
       const data = await response.json()
-      const newExport: Export = data.export
-
-      setExports((prev) => [newExport, ...prev])
-      return newExport
+      setExports((prev) => [{ id: data.id, projectId, format, status: 'queued' } as Export, ...prev])
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error desconocido'
-      setError(message)
-      return null
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
   }
 
-  const checkExportStatus = async (exportId: string): Promise<Export | null> => {
+  const checkExportStatus = async (exportId: string): Promise<void> => {
     try {
       const response = await fetch(`/api/exports/${exportId}`)
-
-      if (!response.ok) {
-        throw new Error('Error al obtener estado')
-      }
+      if (!response.ok) throw new Error('Error fetching export status')
 
       const data = await response.json()
-      const updatedExport: Export = data.export
-
       setExports((prev) =>
-        prev.map((e) => (e.id === exportId ? updatedExport : e))
+        prev.map((e) => (e.id === exportId ? { ...e, ...data.export } : e))
       )
-
-      return updatedExport
     } catch (err) {
       console.error('Error checking export status:', err)
-      return null
     }
   }
 
@@ -92,7 +66,7 @@ export function useVideoExport({ projectId }: UseVideoExportProps) {
     }
   }
 
-  const fetchExports = async (): Promise<Export[]> => {
+  const fetchExports = async (): Promise<void> => {
     try {
       const response = await fetch(`/api/exports?projectId=${projectId}`)
 
@@ -102,12 +76,23 @@ export function useVideoExport({ projectId }: UseVideoExportProps) {
 
       const data = await response.json()
       setExports(data.exports || [])
-      return data.exports || []
     } catch (err) {
       console.error('Error fetching exports:', err)
-      return []
     }
   }
+
+  useEffect(() => {
+    fetchExports()
+    const interval = setInterval(() => {
+      exports.forEach((exp) => {
+        if (exp.status !== 'completed' && exp.status !== 'failed') {
+          checkExportStatus(exp.id)
+        }
+      })
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [projectId])
 
   return {
     exports,

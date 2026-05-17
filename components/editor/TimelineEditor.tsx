@@ -124,16 +124,16 @@ export default function TimelineEditor({
                   </div>
                 )}
 
-                {scene.effect && (
+                {scene.effects?.[0] && (
                   <div>
                     <label className="text-xs font-medium text-gray-400 block mb-1">
                       Efecto
                     </label>
                     <input
                       type="text"
-                      value={scene.effect}
+                      value={scene.effects?.[0]}
                       onChange={(e) =>
-                        onUpdateScene(scene.id, { effect: e.target.value })
+                        onUpdateScene(scene.id, { effects: [e.target.value] })
                       }
                       className="w-full px-3 py-2 bg-dark-secondary border border-white/10 rounded text-sm text-white focus:outline-none focus:border-neon"
                     />

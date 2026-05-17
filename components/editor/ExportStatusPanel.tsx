@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import type { Export } from '@/lib/hooks/useVideoExport'
+import type { Export } from '@/lib/types'
 import Button from '@/components/ui/Button'
 
 interface ExportStatusPanelProps {

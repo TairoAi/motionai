@@ -178,7 +178,7 @@ export default function VideoPreview({
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {currentScene?.duration}ms
-            {currentScene?.effect && ` • ${currentScene.effect}`}
+            {currentScene?.effects?.[0] && ` • ${currentScene.effects?.[0]}`}
           </p>
         </div>
       </div>

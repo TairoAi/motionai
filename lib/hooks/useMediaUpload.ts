@@ -19,7 +19,7 @@ export function useMediaUpload({ projectId }: UseMediaUploadProps) {
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
 
-  const uploadFiles = async (files: FileList): Promise<Media[]> => {
+  const uploadFiles = async (files: File[] | FileList): Promise<Media[]> => {
     setLoading(true)
     setError('')
     setProgress(0)

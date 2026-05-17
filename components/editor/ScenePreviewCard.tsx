@@ -111,9 +111,9 @@ export default function ScenePreviewCard({
           <span className="text-xs text-gray-400">
             {Math.round(scene.duration / 1000)}s
           </span>
-          {scene.effect && (
+          {scene.effects?.[0] && (
             <span className="text-xs px-2 py-1 bg-white/10 rounded text-gray-300">
-              {scene.effect}
+              {scene.effects?.[0]}
             </span>
           )}
         </div>
