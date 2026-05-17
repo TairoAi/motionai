@@ -337,8 +337,30 @@ export default function EditorPage() {
                     onMouseEnter={() => setHoveredFileIndex(index)}
                     onMouseLeave={() => setHoveredFileIndex(null)}
                   >
-                    <div style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.25rem' }}>
-                      {file.type.startsWith('image/') ? '🖼️' : '🎥'}
+                    <div style={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      borderRadius: '0.375rem',
+                      overflow: 'hidden',
+                      marginBottom: '0.25rem',
+                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {file.type.startsWith('image/') ? (
+                        <img
+                          src={file.fileUrl}
+                          alt={file.fileName}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <video
+                          src={file.fileUrl}
+                          muted
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
                     </div>
                     <p style={{
                       fontSize: '0.65rem',
