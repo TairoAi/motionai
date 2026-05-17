@@ -11,10 +11,10 @@ export default function Home() {
           ✨ MotionAI
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link href="/auth/login" style={{ padding: '0.75rem 1.5rem', color: '#a0aec0', textDecoration: 'none', transition: 'all 0.3s' }} onMouseEnter={(e) => e.target.style.color = '#00d4ff'} onMouseLeave={(e) => e.target.style.color = '#a0aec0'}>
+          <Link href="/auth/login" style={{ padding: '0.75rem 1.5rem', color: '#a0aec0', textDecoration: 'none', transition: 'all 0.3s' }} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = '#00d4ff'} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = '#a0aec0'}>
             Sign In
           </Link>
-          <Link href="/auth/signup" style={{ padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '600', textDecoration: 'none', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 10px 30px rgba(0, 212, 255, 0.3)' }} onMouseEnter={(e) => e.target.style.boxShadow = '0 15px 40px rgba(0, 212, 255, 0.5)'} onMouseLeave={(e) => e.target.style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.3)'}>
+          <Link href="/auth/signup" style={{ padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '600', textDecoration: 'none', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 10px 30px rgba(0, 212, 255, 0.3)' }} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.boxShadow = '0 15px 40px rgba(0, 212, 255, 0.5)'} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.3)'}>
             Get Started
           </Link>
         </div>
@@ -30,10 +30,10 @@ export default function Home() {
             Sube screenshots, describe tu producto, elige un estilo.<br />MotionAI genera videos profesionales que compiten con Apple y OpenAI — en minutos.
           </p>
           <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/dashboard" style={{ padding: '1rem 2rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 20px 40px rgba(0, 212, 255, 0.4)' }} onMouseEnter={(e) => { e.target.style.transform = 'translateY(-5px)'; e.target.style.boxShadow = '0 30px 50px rgba(0, 212, 255, 0.6)'; }} onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 20px 40px rgba(0, 212, 255, 0.4)'; }}>
+            <Link href="/dashboard" style={{ padding: '1rem 2rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 20px 40px rgba(0, 212, 255, 0.4)' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-5px)'; el.style.boxShadow = '0 30px 50px rgba(0, 212, 255, 0.6)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = '0 20px 40px rgba(0, 212, 255, 0.4)'; }}>
               🚀 Comenzar Gratis
             </Link>
-            <button style={{ padding: '1rem 2rem', background: 'transparent', border: '2px solid #00d4ff', color: '#00d4ff', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s' }} onMouseEnter={(e) => { e.target.style.background = 'rgba(0, 212, 255, 0.1)'; e.target.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.boxShadow = 'none'; }}>
+            <button style={{ padding: '1rem 2rem', background: 'transparent', border: '2px solid #00d4ff', color: '#00d4ff', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.3s' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(0, 212, 255, 0.1)'; el.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.boxShadow = 'none'; }}>
               Ver Demo
             </button>
           </div>
@@ -100,7 +100,7 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button style={{ width: '100%', padding: '1rem', background: p.highlighted ? 'linear-gradient(135deg, #00d4ff, #00ff88)' : 'transparent', color: p.highlighted ? '#0a0e27' : '#00d4ff', border: p.highlighted ? 'none' : '2px solid #00d4ff', borderRadius: '0.75rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s', fontSize: '1.1rem' }} onMouseEnter={(e) => { e.target.style.transform = 'translateY(-3px)'; e.target.style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}>
+              <button style={{ width: '100%', padding: '1rem', background: p.highlighted ? 'linear-gradient(135deg, #00d4ff, #00ff88)' : 'transparent', color: p.highlighted ? '#0a0e27' : '#00d4ff', border: p.highlighted ? 'none' : '2px solid #00d4ff', borderRadius: '0.75rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s', fontSize: '1.1rem' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.3)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = 'none'; }}>
                 Empezar
               </button>
             </div>
@@ -116,7 +116,7 @@ export default function Home() {
         <p style={{ fontSize: '1.25rem', color: '#cbd5e0', marginBottom: '2.5rem', maxWidth: '600px', margin: '0 auto 2.5rem' }}>
           Únete a startups y creadores que generan videos profesionales con MotionAI
         </p>
-        <Link href="/dashboard" style={{ display: 'inline-block', padding: '1.25rem 2.5rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.2rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 20px 40px rgba(0, 212, 255, 0.4)' }} onMouseEnter={(e) => { e.target.style.transform = 'translateY(-5px)'; e.target.style.boxShadow = '0 30px 50px rgba(0, 212, 255, 0.6)'; }} onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 20px 40px rgba(0, 212, 255, 0.4)'; }}>
+        <Link href="/dashboard" style={{ display: 'inline-block', padding: '1.25rem 2.5rem', background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#0a0e27', borderRadius: '0.75rem', fontWeight: '700', textDecoration: 'none', fontSize: '1.2rem', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 20px 40px rgba(0, 212, 255, 0.4)' }} onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-5px)'; el.style.boxShadow = '0 30px 50px rgba(0, 212, 255, 0.6)'; }} onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = '0 20px 40px rgba(0, 212, 255, 0.4)'; }}>
           Empezar Ahora — Es Gratis 🚀
         </Link>
       </section>
