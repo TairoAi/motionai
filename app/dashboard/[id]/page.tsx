@@ -15,9 +15,13 @@ export default function EditorPage() {
   const [loading, setLoading] = useState(true)
   const [headline, setHeadline] = useState('')
   const [description, setDescription] = useState('')
-  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ fileName: string; fileUrl: string; type: string; size: number }>>([])
+  const [hoveredFileIndex, setHoveredFileIndex] = useState<number | null>(null)
+  const [generatedScenes, setGeneratedScenes] = useState<any[]>([])
+  const [generatingScenes, setGeneratingScenes] = useState(false)
+  const [sceneError, setSceneError] = useState('')
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -37,6 +41,19 @@ export default function EditorPage() {
 
         if (error) throw error
         setProject(data)
+        setHeadline(data.data?.headline ?? '')
+        setDescription(data.data?.description ?? '')
+        if (Array.isArray(data.data?.media)) {
+          setUploadedFiles(
+            data.data.media.map((url: string) => ({
+              fileName: url.split('/').pop() ?? url,
+              fileUrl: url,
+              type: /\.(mp4|webm|mov)(\?|$)/i.test(url) ? 'video/*' : 'image/*',
+              size: 0,
+            }))
+          )
+        }
+        if (data.data?.scenes) setGeneratedScenes(data.data.scenes)
       } catch (err) {
         console.error('Error:', err)
         router.push('/dashboard')
@@ -70,12 +87,18 @@ export default function EditorPage() {
         }
 
         const data = await response.json()
-        setUploadedFiles(prev => [...prev, data.fileUrl])
+        setUploadedFiles(prev => [...prev, {
+          fileName: data.fileName,
+          fileUrl: data.fileUrl,
+          type: data.type,
+          size: data.size
+        }])
       }
-      alert('✓ Archivo(s) subido(s) correctamente')
+      setNotification({ type: 'success', message: '✓ Archivo(s) subido(s) correctamente' })
+      setTimeout(() => setNotification(null), 2000)
     } catch (err) {
       console.error('Upload error:', err)
-      alert('Error al subir archivo')
+      setNotification({ type: 'error', message: 'Error al subir archivo' })
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -85,9 +108,37 @@ export default function EditorPage() {
   }
 
   const handleSaveProject = async () => {
-    if (!project) return
-    setSaving(true)
+    if (!project || !headline.trim()) {
+      setNotification({ type: 'error', message: 'Por favor ingresa un titular' })
+      return
+    }
+
+    setGeneratingScenes(true)
+    setSceneError('')
+
     try {
+      // Call API to generate scenes
+      const sceneResponse = await fetch('/api/generate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          style: project.style,
+          headline: headline.trim(),
+          subtitle: '',
+          description: description.trim()
+        })
+      })
+
+      if (!sceneResponse.ok) {
+        const errorData = await sceneResponse.json()
+        throw new Error(errorData.error || 'Error al generar escenas')
+      }
+
+      const { scenes } = await sceneResponse.json()
+      setGeneratedScenes(scenes)
+
+      // Save project with scenes
       const { error } = await supabase
         .from('projects')
         .update({
@@ -95,20 +146,27 @@ export default function EditorPage() {
             ...project.data,
             headline,
             description,
-            media: uploadedFiles,
+            media: uploadedFiles.map(f => f.fileUrl),
+            scenes: scenes
           },
           updated_at: new Date().toISOString()
         })
         .eq('id', projectId)
 
       if (error) throw error
-      alert('✓ Proyecto guardado')
+      setNotification({ type: 'success', message: '✓ Escenas generadas y proyecto guardado' })
+      setTimeout(() => setNotification(null), 3000)
     } catch (err) {
-      console.error('Error saving:', err)
-      alert('Error al guardar')
+      const message = err instanceof Error ? err.message : 'Error al generar escenas'
+      setSceneError(message)
+      console.error('Error:', err)
     } finally {
-      setSaving(false)
+      setGeneratingScenes(false)
     }
+  }
+
+  const handleDeleteFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   if (loading) {
@@ -132,6 +190,23 @@ export default function EditorPage() {
 
   return (
     <div style={{ backgroundColor: '#0a0e27', color: '#ffffff', minHeight: '100vh' }}>
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          padding: '1rem 1.5rem',
+          backgroundColor: notification.type === 'success' ? 'rgba(0, 255, 136, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+          border: `1px solid ${notification.type === 'success' ? 'rgba(0, 255, 136, 0.5)' : 'rgba(239, 68, 68, 0.5)'}`,
+          borderRadius: '0.5rem',
+          color: notification.type === 'success' ? '#86efac' : '#fca5a5',
+          fontSize: '0.875rem',
+          zIndex: 50,
+          animation: 'fadeIn 0.3s ease-in'
+        }}>
+          {notification.message}
+        </div>
+      )}
       <header style={{
         borderBottom: '1px solid rgba(0, 212, 255, 0.2)',
         backdropFilter: 'blur(10px)',
@@ -234,12 +309,81 @@ export default function EditorPage() {
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(0, 212, 255, 0.2)',
               borderRadius: '0.75rem',
-              padding: '1rem',
-              backdropFilter: 'blur(10px)'
+              padding: '1.5rem',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
             }}>
-              <p style={{ fontSize: '0.875rem', color: '#cbd5e0', marginBottom: '0.75rem', fontWeight: '600' }}>
+              <h3 style={{ fontSize: '0.875rem', color: '#cbd5e0', fontWeight: '600' }}>
                 ✓ {uploadedFiles.length} archivo(s)
-              </p>
+              </h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: '0.75rem'
+              }}>
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      position: 'relative',
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(0, 212, 255, 0.15)',
+                      borderRadius: '0.5rem',
+                      padding: '0.5rem',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseEnter={() => setHoveredFileIndex(index)}
+                    onMouseLeave={() => setHoveredFileIndex(null)}
+                  >
+                    <div style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '0.25rem' }}>
+                      {file.type.startsWith('image/') ? '🖼️' : '🎥'}
+                    </div>
+                    <p style={{
+                      fontSize: '0.65rem',
+                      color: '#cbd5e0',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {file.fileName.substring(0, 12)}
+                    </p>
+                    <p style={{ fontSize: '0.6rem', color: '#718096', marginBottom: '0.5rem' }}>
+                      {(file.size / 1024).toFixed(0)}KB
+                    </p>
+                    {hoveredFileIndex === index && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteFile(index)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '0.3rem',
+                          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                          border: '1px solid rgba(239, 68, 68, 0.5)',
+                          color: '#fca5a5',
+                          borderRadius: '0.3rem',
+                          fontSize: '0.6rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(239, 68, 68, 0.4)'
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(239, 68, 68, 0.2)'
+                        }}
+                      >
+                        ✕ Eliminar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -318,35 +462,47 @@ export default function EditorPage() {
               />
             </div>
 
+            {sceneError && (
+              <div style={{
+                padding: '0.75rem',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                borderRadius: '0.5rem',
+                color: '#fca5a5',
+                fontSize: '0.875rem'
+              }}>
+                ⚠️ {sceneError}
+              </div>
+            )}
             <button
               onClick={handleSaveProject}
-              disabled={saving || uploading}
+              disabled={generatingScenes || uploading || !headline.trim()}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: saving || uploading ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                background: generatingScenes || uploading || !headline.trim() ? 'rgba(0, 212, 255, 0.5)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
                 color: '#0a0e27',
                 fontWeight: '700',
                 borderRadius: '0.5rem',
                 border: 'none',
-                cursor: saving || uploading ? 'not-allowed' : 'pointer',
+                cursor: generatingScenes || uploading || !headline.trim() ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 transition: 'all 0.3s',
-                opacity: saving || uploading ? 0.7 : 1
+                opacity: generatingScenes || uploading || !headline.trim() ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
-                if (!saving && !uploading) {
+                if (!generatingScenes && !uploading && headline.trim()) {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
                   ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
                 }
               }}
               onMouseLeave={(e) => {
-                if (!saving && !uploading) {
+                if (!generatingScenes && !uploading && headline.trim()) {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                   ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
                 }
               }}
             >
-              {saving ? 'Guardando...' : 'Generar Escenas'}
+              {generatingScenes ? '⏳ Generando...' : 'Generar Escenas'}
             </button>
           </div>
         </div>
@@ -362,26 +518,83 @@ export default function EditorPage() {
             flexDirection: 'column',
             gap: '1rem'
           }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Vista Previa</h3>
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '16 / 9',
-                borderRadius: '0.5rem',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                border: '1px solid rgba(0, 212, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎬</div>
-                <p style={{ fontSize: '0.9rem', color: '#a0aec0' }}>
-                  Vista previa aquí
-                </p>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Escenas Generadas</h3>
+            {generatedScenes.length === 0 ? (
+              <div
+                style={{
+                  width: '100%',
+                  aspectRatio: '16 / 9',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(0, 212, 255, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎬</div>
+                  <p style={{ fontSize: '0.9rem', color: '#a0aec0' }}>
+                    Las escenas aparecerán aquí
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                maxHeight: '400px',
+                overflowY: 'auto'
+              }}>
+                {generatedScenes.map((scene, idx) => (
+                  <div
+                    key={scene.id}
+                    style={{
+                      padding: '1rem',
+                      backgroundColor: 'rgba(0, 212, 255, 0.08)',
+                      border: '1px solid rgba(0, 212, 255, 0.3)',
+                      borderRadius: '0.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '24px',
+                        height: '24px',
+                        backgroundColor: 'rgba(0, 212, 255, 0.3)',
+                        borderRadius: '50%',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <span style={{ fontSize: '0.875rem', color: '#cbd5e0', textTransform: 'capitalize', fontWeight: '600' }}>
+                        {scene.type}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#718096', marginLeft: 'auto' }}>
+                        {scene.duration}ms
+                      </span>
+                    </div>
+                    {scene.text && (
+                      <p style={{ fontSize: '0.85rem', color: '#a0aec0', marginLeft: '32px' }}>
+                        "{scene.text}"
+                      </p>
+                    )}
+                    {scene.effect && (
+                      <p style={{ fontSize: '0.75rem', color: '#718096', marginLeft: '32px' }}>
+                        Efecto: {scene.effect}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{
