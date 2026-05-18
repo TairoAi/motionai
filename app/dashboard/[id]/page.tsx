@@ -4,7 +4,6 @@ import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
-import { renderVideoFromScenes } from '@/lib/videoRenderer'
 
 export default function EditorPage() {
   const router = useRouter()
@@ -174,34 +173,64 @@ export default function EditorPage() {
 
   const handleExport = async () => {
     if (!project) return
-    if (generatedScenes.length === 0) {
-      setNotification({ type: 'error', message: 'Genera las escenas primero' })
+    if (!headline.trim()) {
+      setNotification({ type: 'error', message: 'Pon un titular antes de exportar' })
       setTimeout(() => setNotification(null), 3000)
       return
     }
 
     setExporting(true)
-    setExportProgress(0)
+    setExportProgress(5)
     try {
-      const blob = await renderVideoFromScenes({
-        scenes: generatedScenes,
-        mediaUrls: uploadedFiles.filter(f => f.type.startsWith('image/')).map(f => f.fileUrl),
-        style: project.style,
-        headline,
-        description,
-        onProgress: (pct) => setExportProgress(Math.round(pct * 100)),
+      const firstImage = uploadedFiles.find(f => f.type.startsWith('image/'))?.fileUrl
+      const startRes = await fetch('/api/render-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          headline: headline.trim(),
+          description: description.trim(),
+          imageUrl: firstImage,
+          style: project.style,
+        }),
       })
+      if (!startRes.ok) {
+        const err = await startRes.json().catch(() => ({}))
+        throw new Error(err.error || 'No se pudo iniciar el render')
+      }
+      const { id } = await startRes.json()
+      if (!id) throw new Error('Render sin id')
 
+      setExportProgress(15)
+      let finalUrl: string | null = null
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 2000))
+        const sRes = await fetch(`/api/render-video/${id}`)
+        const s = await sRes.json()
+        if (s.status === 'succeeded') {
+          finalUrl = s.url
+          setExportProgress(95)
+          break
+        }
+        if (s.status === 'failed') {
+          throw new Error(s.error_message || 'Render falló')
+        }
+        setExportProgress(Math.min(90, 15 + i * 4))
+      }
+      if (!finalUrl) throw new Error('Timeout esperando al render')
+
+      const blobRes = await fetch(finalUrl)
+      const blob = await blobRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${project.title.replace(/[^\w]+/g, '-')}.webm`
+      a.download = `${project.title.replace(/[^\w]+/g, '-')}.mp4`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url), 5000)
 
-      setNotification({ type: 'success', message: '✓ Video descargado' })
+      setExportProgress(100)
+      setNotification({ type: 'success', message: '✓ Video MP4 descargado' })
       setTimeout(() => setNotification(null), 3000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al renderizar'
@@ -695,22 +724,22 @@ export default function EditorPage() {
 
             <button
               onClick={handleExport}
-              disabled={exporting || generatedScenes.length === 0}
+              disabled={exporting || !headline.trim()}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: exporting || generatedScenes.length === 0 ? 'rgba(0, 212, 255, 0.4)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                background: exporting || !headline.trim() ? 'rgba(0, 212, 255, 0.4)' : 'linear-gradient(135deg, #00d4ff, #00ff88)',
                 color: '#0a0e27',
                 fontWeight: '700',
                 borderRadius: '0.5rem',
                 border: 'none',
-                cursor: exporting || generatedScenes.length === 0 ? 'not-allowed' : 'pointer',
+                cursor: exporting || !headline.trim() ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 transition: 'all 0.3s',
                 marginTop: '0.5rem',
-                opacity: exporting || generatedScenes.length === 0 ? 0.7 : 1
+                opacity: exporting || !headline.trim() ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
-                if (!exporting && generatedScenes.length > 0) {
+                if (!exporting && headline.trim()) {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
                   ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(0, 212, 255, 0.4)'
                 }
@@ -720,7 +749,7 @@ export default function EditorPage() {
                 ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
               }}
             >
-              {exporting ? `Renderizando ${exportProgress}%` : '📥 Exportar video'}
+              {exporting ? `Renderizando ${exportProgress}%` : '🎬 Generar video MP4'}
             </button>
           </div>
         </div>
